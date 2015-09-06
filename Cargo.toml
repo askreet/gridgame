@@ -1,0 +1,7 @@
+[package]
+name = "gridgame"
+version = "0.1.0"
+authors = ["Kyle Smith <kyle.smith@acquia.com>"]
+
+[dependencies]
+sfml = "0.9.3"
