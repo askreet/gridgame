@@ -3,8 +3,7 @@
 extern crate sfml;
 extern crate rand;
 
-
-use sfml::graphics::{RenderWindow, Color, Shape, RenderTarget, Vertex, VertexArray, PrimitiveType, RectangleShape, Texture, Sprite};
+use sfml::graphics::{RenderWindow, Color, Shape, RenderTarget, Vertex, VertexArray, PrimitiveType, RectangleShape, Texture, Sprite, Font, Text};
 use sfml::window::{VideoMode, ContextSettings, event, Close};
 use sfml::window::keyboard::Key;
 use sfml::system::Clock;
@@ -34,6 +33,10 @@ fn main() {
         .expect("Cannot load enemy.png!");
     let treasure_texture = Texture::new_from_file("data/treasure.png")
         .expect("Cannot load treasure.png");
+
+    // Load Fonts
+    let dosis_medium_font = Font::new_from_file("data/Dosis/Dosis-Medium.ttf")
+        .expect("Could not load Dosis-Medium.ttf!");
 
     let mut game_state = GameState::new(&player_texture, &enemy_texture, &treasure_texture);
     let mut last_enemy_movement: f32 = 0.0;
@@ -69,6 +72,7 @@ fn main() {
                     game_state.move_enemies();
                 }
 
+                draw_status_bar(&mut window, &game_state, &dosis_medium_font);
                 game_state.draw_all(&mut window);
             }
             Phase::PlayerLost => {
@@ -85,6 +89,17 @@ fn main() {
                 };
 
                 rect.set_fill_color(&Color::new_rgba(0, 0, 0, alpha));
+                let mut text = Text::new_init("GAME OVER", &dosis_medium_font, SQUARE_SIZE as u32 * 2)
+                    .expect("Failed to render text!");
+                let mut textRect = text.get_local_bounds();
+                println!("textRect.width = {}, / 2.0 = {}", textRect.height, textRect.height / 2.0);
+                println!("math says {}", WINDOW_X as f32 - (textRect.width / 2.0));
+                text.set_position2f(
+                    (WINDOW_X as f32 / 2.0) - (textRect.width / 2.0),
+                    (WINDOW_Y as f32 / 2.0) - (textRect.height / 2.0));
+                println!("{:?}", text.get_position());
+                text.set_color(&Color::red());
+                window.draw(&text);
 
                 window.draw(&rect);
             },
@@ -113,6 +128,11 @@ fn draw_grid(window: &mut RenderWindow) {
     }
 }
 
-fn display_level_complete() {
-    
+fn draw_status_bar(window: &mut RenderWindow, game_state: &GameState, font: &Font) {
+    let mut text = Text::new_init(
+        &format!("Level: {}   Score: {}   Time: {}", game_state.level, game_state.score, game_state.clock.get_elapsed_time().as_seconds()), font, 32)
+        .expect("Failed to render font.");
+    text.set_color(&Color::white());
+    text.set_position2f(PADDINGF, (WINDOW_Y - 32) as f32);
+    window.draw(&text);
 }
