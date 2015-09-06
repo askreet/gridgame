@@ -5,3 +5,4 @@ authors = ["Kyle Smith <kyle.smith@acquia.com>"]
 
 [dependencies]
 sfml = "0.9.3"
+rand = "0.3"

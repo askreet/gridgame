@@ -1,5 +1,7 @@
 extern crate sfml;
 
+use std::fmt;
+
 use sfml::graphics::Sprite;
 use sfml::graphics::Texture;
 use sfml::graphics::RenderTarget;
@@ -52,4 +54,10 @@ impl<'a> Piece<'a> {
         target.draw(&sprite);
     }
 
+}
+
+impl<'a> fmt::Debug for Piece<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "({}, {})", self.x, self.y)
+    }
 }
