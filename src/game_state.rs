@@ -1,3 +1,4 @@
+use sfml::audio::{Sound, SoundBuffer};
 use sfml::graphics::{RenderWindow};
 use sfml::system::Clock;
 
@@ -5,7 +6,7 @@ use rand;
 use rand::distributions::{IndependentSample, Range};
 
 use piece::Piece;
-use assets::Assets;
+use assets::{Assets, Soundboard};
 
 use constants::*;
 
@@ -36,6 +37,8 @@ pub struct GameState<'a> {
     pub last_tick: i32,
     pub game_over_clock: Option<Clock>,
 
+    pub soundboard: Soundboard,
+
     pub debug_ticks: bool,
     pub debug_loop: bool,
 }
@@ -54,6 +57,8 @@ impl<'a> GameState<'a> {
             last_tick: 0,
             game_over_clock: None,
 
+            soundboard: Soundboard::new(assets),
+            
             debug_ticks: false,
             debug_loop: false,
         }
@@ -68,6 +73,7 @@ impl<'a> GameState<'a> {
             Entity::Enemy => { self.game_over(); return; },
             
             Entity::Treasure => {
+                self.soundboard.s_pickup.play();
                 self.score += 1;
                 let (x, y) = (self.player.x + x, self.player.y + y);
                 // Keep all other treasures.
