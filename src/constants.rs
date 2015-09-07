@@ -8,3 +8,5 @@ pub const WINDOW_Y: u32 = WINDOW_X + 32 + PADDING; // To show clock / score.
 pub const ENEMY_MOVE_FREQ: f32 = 0.4;
 
 pub const TICK_FREQ_MS: i32 = 250;
+pub const NUM_TREASURES: usize = 2;
+pub const NUM_ENEMIES: usize = 4;

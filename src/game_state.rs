@@ -15,6 +15,7 @@ pub enum Phase {
     LevelComplete,
 }
 
+#[derive(PartialEq)]
 pub enum Entity {
     Player,
     Enemy,
@@ -23,10 +24,14 @@ pub enum Entity {
 }
 
 pub struct GameState<'a> {
+    t_player: &'a Texture,
+    t_enemy: &'a Texture,
+    t_treasure: &'a Texture,
     pub level: i8,
     pub score: i8,
     pub player: Piece<'a>,
     pub enemies: Vec<Piece<'a>>,
+    pub treasures: Vec<Piece<'a>>,
     pub phase: Phase,
     pub clock: Clock,
     pub last_tick: i32,
@@ -36,15 +41,14 @@ pub struct GameState<'a> {
 impl<'a> GameState<'a> {
     pub fn new(player_texture: &'a Texture, enemy_texture: &'a Texture, treasure_texture: &'a Texture) -> GameState<'a> {
         GameState {
+            t_player: player_texture,
+            t_enemy: enemy_texture,
+            t_treasure: treasure_texture,
             level: 1,
             score: 0,
             player: Piece::new(9, 5, player_texture),
-            enemies: vec![
-                Piece::new(1, 1, &enemy_texture),
-                Piece::new(2, 2, &enemy_texture),
-                Piece::new(9, 1, &enemy_texture),
-                Piece::new(8, 2, &enemy_texture),
-                ],
+            enemies: Vec::new(),
+            treasures: Vec::new(),
             phase: Phase::Playing,
             clock: Clock::new(),
             last_tick: 0,
@@ -56,16 +60,17 @@ impl<'a> GameState<'a> {
         if self.phase != Phase::Playing {
             return;
         }
-        // Check for enemy collision
-        let mut game_over = false;
-        for enemy in &self.enemies {
-            if (self.player.x + x) == enemy.x && (self.player.y + y) == enemy.y {
-                game_over = true;
-            }
-        }
-        if game_over {
-            self.game_over();
-            return;
+
+        match self.entity_at_square(self.player.x + x, self.player.y + y) {
+            Entity::Enemy => { self.game_over(); return; },
+            
+            Entity::Treasure => {
+                self.score += 1;
+                let (x, y) = (self.player.x + x, self.player.y + y);
+                // Keep all other treasures.
+                self.treasures.retain(|t| { t.x != x || t.y != y });
+            },
+            _ => {},
         }
 
         // Check for win condition
@@ -95,6 +100,9 @@ impl<'a> GameState<'a> {
         for enemy in &self.enemies {
             enemy.draw(window);
         }
+        for treasure in &self.treasures {
+            treasure.draw(window);
+        }
         self.player.draw(window);
     }
 
@@ -106,6 +114,12 @@ impl<'a> GameState<'a> {
         for enemy in &self.enemies {
             if enemy.x == x && enemy.y == y {
                 return Entity::Enemy;
+            }
+        }
+
+        for treasure in &self.treasures {
+            if treasure.x == x && treasure.y == y {
+                return Entity::Treasure;
             }
         }
 
@@ -128,7 +142,7 @@ impl<'a> GameState<'a> {
             _ => (0, 0), // This shouldn't happen.
         }
     }
-    
+
     pub fn seconds_since_dead(&self) -> f32 {
         match self.game_over_clock {
             Some(ref clock) => clock.get_elapsed_time().as_seconds(),
@@ -152,5 +166,33 @@ impl<'a> GameState<'a> {
         if self.last_tick % 4 == 0 {
             self.move_enemies();
         }
+
+        if self.last_tick > 2000 && self.treasures.len() < NUM_TREASURES {
+            let point = self.random_free_sq();
+            // Add a treasure.
+            self.treasures.push(Piece::new(point.0, point.1, self.t_treasure));
+        }
+
+        if self.last_tick > 1000 && self.enemies.len() < NUM_ENEMIES {
+            let point = self.random_free_sq();
+            self.enemies.push(Piece::new(point.0, point.1, self.t_enemy));
+        }
     }
+
+    fn random_free_sq(&self) -> (i8, i8) {
+        let mut point: (i8, i8);
+        loop {
+            point = random_sq();
+            if Entity::Nothing == self.entity_at_square(point.0, point.1) {
+                break;
+            }
+        }
+        point
+    }
+}
+
+fn random_sq() -> (i8, i8) {
+    let between = Range::new(0, GRID_SIZE);
+    let mut rng = rand::thread_rng();
+    (between.ind_sample(&mut rng) as i8, between.ind_sample(&mut rng) as i8)
 }
