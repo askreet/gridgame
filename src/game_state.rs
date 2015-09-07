@@ -49,7 +49,7 @@ impl<'a> GameState<'a> {
             assets: assets,
             level: 1,
             score: 0,
-            player: Piece::new(4, 5, &assets.t_player),
+            player: Piece::new(45., 55., &assets.t_player),
             enemies: Vec::new(),
             treasures: Vec::new(),
             phase: Phase::Playing,
@@ -64,7 +64,7 @@ impl<'a> GameState<'a> {
         }
     }
     
-    pub fn move_player(&mut self, x: i8, y: i8) {
+    pub fn move_player(&mut self, x: f32, y: f32) {
         if self.phase != Phase::Playing {
             return;
         }
@@ -115,7 +115,7 @@ impl<'a> GameState<'a> {
         self.player.draw(window);
     }
 
-    pub fn entity_at_square(&self, x: i8, y: i8) -> Entity {
+    pub fn entity_at_square(&self, x: f32, y: f32) -> Entity {
         if self.player.x == x && self.player.y == y {
             return Entity::Player;
         }
@@ -140,22 +140,22 @@ impl<'a> GameState<'a> {
         self.game_over_clock = Some(Clock::new());
     }
 
-    fn random_movement(&self) -> (i8, i8) {
+    fn random_movement(&self) -> (f32, f32) {
         let between = Range::new(0, 4);
         let mut rng = rand::thread_rng();
         match between.ind_sample(&mut rng) {
-            0 => (0, -1),
-            1 => (0, 1),
-            2 => (-1, 0),
-            3 => (1, 0),
-            _ => (0, 0), // This shouldn't happen.
+            0 => (0., -1.),
+            1 => (0., 1.),
+            2 => (-1., 0.),
+            3 => (1., 0.),
+            _ => (0., 0.), // This shouldn't happen.
         }
     }
 
-    pub fn seconds_since_dead(&self) -> f32 {
+    pub fn ms_since_dead(&self) -> i32 {
         match self.game_over_clock {
-            Some(ref clock) => clock.get_elapsed_time().as_seconds(),
-            None => 0.0,
+            Some(ref clock) => clock.get_elapsed_time().as_milliseconds(),
+            None => 0,
         }
     }
 
@@ -180,12 +180,12 @@ impl<'a> GameState<'a> {
         }
 
         if self.last_tick > 2000 && self.treasures.len() < NUM_TREASURES {
-            let point = self.random_free_sq();
+            let point = self.random_free_location();
             self.treasures.push(Piece::new(point.0, point.1, &self.assets.t_treasure));
         }
 
         if self.last_tick > 1000 && self.enemies.len() < NUM_ENEMIES {
-            let point = self.random_free_sq();
+            let point = self.random_free_location();
             self.enemies.push(Piece::new(point.0, point.1, &self.assets.t_enemy));
         }
 
@@ -198,15 +198,9 @@ impl<'a> GameState<'a> {
         }
     }
 
-    fn random_free_sq(&self) -> (i8, i8) {
-        let mut point: (i8, i8);
-        loop {
-            point = random_sq();
-            if Entity::Nothing == self.entity_at_square(point.0, point.1) {
-                break;
-            }
-        }
-        point
+    fn random_free_location(&self) -> (f32, f32) {
+        // LOL.
+        random_location()
     }
 
     pub fn reset(&mut self) {
@@ -214,16 +208,20 @@ impl<'a> GameState<'a> {
         self.treasures.clear();
         self.score = 0;
         self.level = 1;
-        self.player.x = 5;
-        self.player.y = 4;
+        self.player.x = 55.0;
+        self.player.y = 45.0;
         self.phase = Phase::Playing;
         self.last_tick = 0;
         self.clock.restart();
     }
 }
 
-fn random_sq() -> (i8, i8) {
-    let between = Range::new(0, GRID_SIZE);
+fn random_location() -> (f32, f32) {
+    (random_upto(PLAYAREA_X), random_upto(PLAYAREA_Y))
+}
+
+fn random_upto(max: f32) -> f32 {
+    let between = Range::new(0.0, max);
     let mut rng = rand::thread_rng();
-    (between.ind_sample(&mut rng) as i8, between.ind_sample(&mut rng) as i8)
+    between.ind_sample(&mut rng)
 }

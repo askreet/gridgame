@@ -1,12 +1,14 @@
-//! Example from SFML: Shape
-
 extern crate sfml;
 extern crate rand;
+extern crate ncollide;
+extern crate nalgebra as na;
 
 use sfml::graphics::{RenderWindow, Color, RenderTarget, RectangleShape, Font, Text};
 use sfml::window::{VideoMode, ContextSettings, event, Close};
 use sfml::window::keyboard::Key;
 use sfml::system::Vector2f;
+
+use ncollide::shape::{Cuboid};
 
 mod constants;
 mod piece;
@@ -27,6 +29,9 @@ fn main() {
     window.set_vertical_sync_enabled(true);
 
     let mut game_state = GameState::new(&assets);
+    let mut curtain = RectangleShape::new().expect("Could not allocate RectangleShape!");
+    curtain.set_size2f(WINDOW_X as f32, WINDOW_Y as f32);
+
     
     while window.is_open() {
         let start_at = game_state.game_timer();
@@ -39,10 +44,10 @@ fn main() {
                         window.close();
                         break;
                     },
-                    Key::Up => game_state.move_player(0, -1),
-                    Key::Down => game_state.move_player(0, 1),
-                    Key::Left => game_state.move_player(-1, 0),
-                    Key::Right => game_state.move_player(1, 0),
+                    Key::Up => game_state.move_player(0., -10.),
+                    Key::Down => game_state.move_player(0., 10.),
+                    Key::Left => game_state.move_player(-10., 0.),
+                    Key::Right => game_state.move_player(10., 0.),
                     Key::Space | Key::Return => {
                         if game_state.phase == Phase::PlayerLost {
                             game_state.reset();
@@ -61,13 +66,13 @@ fn main() {
         }
         // Clear the window
         window.clear(&Color::black());
-        draw_grid(&mut window);
+
+        // Draw the playarea
+        draw_playarea(&mut window);
 
         match game_state.phase {
             Phase::Playing => {
-                if game_state.check_tick() {
-                    game_state.tick();
-                }
+                if game_state.check_tick() { game_state.tick() }
                 
                 draw_status_bar(&mut window, &game_state, &assets.f_dosis_m);
                 game_state.draw_all(&mut window);
@@ -75,18 +80,13 @@ fn main() {
             Phase::PlayerLost => {
                 // Display gradient / game over based on time since loss.
                 game_state.draw_all(&mut window);
-                let mut rect = RectangleShape::new().expect("Could not allocate RectangleShape!");
-                rect.set_size2f(WINDOW_X as f32, WINDOW_Y as f32);
 
-                let time = game_state.seconds_since_dead();
-                let alpha: u8 = if time >= 1.0 {
-                    190
-                } else {
-                    ((time / 1.0) * 190.0).floor() as u8
-                };
+                let time = game_state.ms_since_dead();
+                let alpha = linear_tween(time, 0, curtain.get_fill_color().alpha, 1000);
 
-                rect.set_fill_color(&Color::new_rgba(0, 0, 0, alpha));
-                let mut text = Text::new_init("GAME OVER", &assets.f_dosis_m, SQUARE_SIZE as u32 * 2)
+                curtain.set_fill_color(&Color::new_rgba(0, 0, 0, alpha));
+
+                let mut text = Text::new_init("GAME OVER", &assets.f_dosis_m, 96)
                     .expect("Failed to render text!");
                 let text_rect = text.get_local_bounds();
                 text.set_position2f(
@@ -95,7 +95,7 @@ fn main() {
                 text.set_color(&Color::red());
                 window.draw(&text);
 
-                window.draw(&rect);
+                window.draw(&curtain);
             },
             // Phase::LevelComplete => {},
         }
@@ -109,19 +109,13 @@ fn main() {
     }
 }
 
-fn draw_grid(window: &mut RenderWindow) {
-    for grid_x in 0..GRID_SIZE {
-        for grid_y in 0..GRID_SIZE {
-            let mut rect = RectangleShape::new().expect("Could not allocate RectangleShape!");
-            rect.set_position2f((grid_x as f32) * (SQUARE_SIZE + GRIDLINE_WIDTH) + PADDINGF, (grid_y as f32) * (SQUARE_SIZE + GRIDLINE_WIDTH) + PADDINGF);
-            rect.set_size(&Vector2f{x: SQUARE_SIZE, y: SQUARE_SIZE});
-            rect.set_fill_color(&Color::black());
-            rect.set_outline_color(&Color::new_rgb(64, 64, 64));
-            rect.set_outline_thickness(GRIDLINE_WIDTH);
+fn draw_playarea(window: &mut RenderWindow) {
+    let mut rect = RectangleShape::new().expect("Could not allocate RectangleShape!");
+    rect.set_position2f(PADDING as f32, PADDING as f32);
+    rect.set_size2f(PLAYAREA_X as f32, PLAYAREA_Y as f32);
+    rect.set_fill_color(&Color::new_rgb(64, 64, 64));
 
-            window.draw(&rect);
-        }
-    }
+    window.draw(&rect);
 }
 
 fn draw_status_bar(window: &mut RenderWindow, game_state: &GameState, font: &Font) {
@@ -129,6 +123,15 @@ fn draw_status_bar(window: &mut RenderWindow, game_state: &GameState, font: &Fon
         &format!("Level: {}   Score: {}   Time: {:.2}", game_state.level, game_state.score, game_state.clock.get_elapsed_time().as_seconds()), font, 32)
         .expect("Failed to render font.");
     text.set_color(&Color::white());
-    text.set_position2f(PADDINGF, (WINDOW_Y - 32) as f32);
+    text.set_position2f(PADDING as f32, (WINDOW_Y - 32) as f32);
     window.draw(&text);
+}
+
+// t: current time
+// b: start value
+// c: change in value ??
+// d: duration
+fn linear_tween(t: i32, b: u8, c: u8, d: i32) -> u8 {
+    // TODO: This is probably terribly inefficient.
+    (c as f32 * (t as f32/d as f32) + b as f32) as u8
 }

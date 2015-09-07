@@ -7,16 +7,20 @@ use sfml::graphics::Texture;
 use sfml::graphics::RenderTarget;
 use sfml::graphics::RenderWindow;
 
+use ncollide::shape::Cuboid;
+
+use na::Vec2;
+
 use constants::*;
 
 pub struct Piece<'a> {
-    pub x: i8,
-    pub y: i8,
+    pub x: f32,
+    pub y: f32,
     pub texture: &'a Texture,
 }
 
 impl<'a> Piece<'a> {
-    pub fn new(x: i8, y: i8, texture: &Texture) -> Piece {
+    pub fn new(x: f32, y: f32, texture: &Texture) -> Piece {
         Piece {
             x: x,
             y: y,
@@ -25,11 +29,11 @@ impl<'a> Piece<'a> {
     }
     
     // Returns false if the move is out of bounds.
-    pub fn move_(&mut self, x: i8, y: i8) -> bool {
-        if self.x + x < 0 ||
-            self.x + x > (GRID_SIZE as i8 - 1) ||
-            self.y + y < 0 ||
-            self.y + y > (GRID_SIZE as i8 - 1) {
+    pub fn move_(&mut self, x: f32, y: f32) -> bool {
+        if self.x + x < 0.0 ||
+            self.x + x > PLAYAREA_X ||
+            self.y + y < 0.0 ||
+            self.y + y > PLAYAREA_Y {
                 false
             } else {
                 self.x += x;
@@ -45,15 +49,27 @@ impl<'a> Piece<'a> {
             .expect("Could not create Sprite!");
 
         sprite.scale2f(
-            ((SQUARE_SIZE as u32) / self.texture.get_size().x) as f32,
-            ((SQUARE_SIZE as u32) / self.texture.get_size().y) as f32);
-        sprite.set_position2f(
-            (self.x as f32 * (SQUARE_SIZE + GRIDLINE_WIDTH)) + PADDINGF,
-            (self.y as f32 * (SQUARE_SIZE + GRIDLINE_WIDTH)) + PADDINGF
-                );
+            (PIECE_SIZE / self.texture.get_size().x as f32),
+            (PIECE_SIZE / self.texture.get_size().y as f32));
+        sprite.set_position2f(self.x + PADDING, self.y + PADDING);
         target.draw(&sprite);
     }
 
+    // pub fn get_size() -> Vec2<f32> {
+        
+    // }
+    
+    // TODO: Store this for longer if possible.
+    pub fn get_ncol_shape(&self) -> Cuboid<Vec2<f32>> {
+        Cuboid::new(Vec2::new(self.texture.get_size().x as f32 / 2.0,
+                              self.texture.get_size().y as f32 / 2.0))
+    }
+
+    pub fn get_ncol_vec(&self) -> Vec2<f32> {
+        // TODO: I'm assuming ncollide expects a cen
+        Vec2::new(self.texture.get_size().x as f32 / 2.0,
+                  self.texture.get_size().y as f32 / 2.0)
+    }
 }
 
 impl<'a> fmt::Debug for Piece<'a> {
