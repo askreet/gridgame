@@ -3,44 +3,34 @@
 extern crate sfml;
 extern crate rand;
 
-use sfml::graphics::{RenderWindow, Color, Shape, RenderTarget, Vertex, VertexArray, PrimitiveType, RectangleShape, Texture, Sprite, Font, Text};
+use sfml::graphics::{RenderWindow, Color, RenderTarget, RectangleShape, Font, Text};
 use sfml::window::{VideoMode, ContextSettings, event, Close};
 use sfml::window::keyboard::Key;
-use sfml::system::Clock;
 use sfml::system::Vector2f;
-
-use std::thread;
 
 mod constants;
 mod piece;
 
 use constants::*;
 mod game_state;
-use game_state::{Entity, GameState, Phase};
+use game_state::{GameState, Phase};
 
+mod assets;
 
 fn main() {
+    let assets = assets::load();
+    
     // Create the window of the application
     let setting = ContextSettings::default();
     let mut window = RenderWindow::new(VideoMode::new_init(WINDOW_X, WINDOW_Y, 32), "GridGame", Close, &setting)
         .expect("Cannot create a new RenderWindow");
     window.set_vertical_sync_enabled(true);
 
-    // Load textures
-    let player_texture = Texture::new_from_file("data/player-scaled.png")
-        .expect("Cannot load player-scaled.png!");
-    let enemy_texture = Texture::new_from_file("data/enemy.png")
-        .expect("Cannot load enemy.png!");
-    let treasure_texture = Texture::new_from_file("data/treasure.png")
-        .expect("Cannot load treasure.png");
-
-    // Load Fonts
-    let dosis_medium_font = Font::new_from_file("data/Dosis/Dosis-Medium.ttf")
-        .expect("Could not load Dosis-Medium.ttf!");
-
-    let mut game_state = GameState::new(&player_texture, &enemy_texture, &treasure_texture);
+    let mut game_state = GameState::new(&assets);
     
     while window.is_open() {
+        let start_at = game_state.game_timer();
+        
         for event in window.events() {
             match event {
                 event::Closed => window.close(),
@@ -57,6 +47,12 @@ fn main() {
                         if game_state.phase == Phase::PlayerLost {
                             game_state.reset();
                         }
+                    },
+                    Key::F1 => {
+                        game_state.debug_ticks = !game_state.debug_ticks;
+                    },
+                    Key::F2 => {
+                        game_state.debug_loop = !game_state.debug_loop;
                     }
                     _ => {}
                 },
@@ -73,7 +69,7 @@ fn main() {
                     game_state.tick();
                 }
                 
-                draw_status_bar(&mut window, &game_state, &dosis_medium_font);
+                draw_status_bar(&mut window, &game_state, &assets.f_dosis_m);
                 game_state.draw_all(&mut window);
             }
             Phase::PlayerLost => {
@@ -90,23 +86,26 @@ fn main() {
                 };
 
                 rect.set_fill_color(&Color::new_rgba(0, 0, 0, alpha));
-                let mut text = Text::new_init("GAME OVER", &dosis_medium_font, SQUARE_SIZE as u32 * 2)
+                let mut text = Text::new_init("GAME OVER", &assets.f_dosis_m, SQUARE_SIZE as u32 * 2)
                     .expect("Failed to render text!");
-                let mut textRect = text.get_local_bounds();
+                let text_rect = text.get_local_bounds();
                 text.set_position2f(
-                    (WINDOW_X as f32 / 2.0) - (textRect.width / 2.0),
-                    (WINDOW_Y as f32 / 2.0) - (textRect.height / 2.0));
+                    (WINDOW_X as f32 / 2.0) - (text_rect.width / 2.0),
+                    (WINDOW_Y as f32 / 2.0) - (text_rect.height / 2.0));
                 text.set_color(&Color::red());
                 window.draw(&text);
 
                 window.draw(&rect);
             },
-            Phase::LevelComplete => {
-            },
+            // Phase::LevelComplete => {},
         }
         
         // Display things on screen
         window.display();
+
+        if game_state.debug_loop {
+            println!("Main loop complete in {}ms", game_state.game_timer() - start_at);
+        }
     }
 }
 

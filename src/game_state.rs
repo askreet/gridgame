@@ -1,10 +1,11 @@
-use sfml::graphics::{RenderWindow, Texture};
+use sfml::graphics::{RenderWindow};
 use sfml::system::Clock;
 
 use rand;
 use rand::distributions::{IndependentSample, Range};
 
 use piece::Piece;
+use assets::Assets;
 
 use constants::*;
 
@@ -12,7 +13,7 @@ use constants::*;
 pub enum Phase {
     Playing,
     PlayerLost,
-    LevelComplete,
+    // LevelComplete,
 }
 
 #[derive(PartialEq)]
@@ -24,9 +25,7 @@ pub enum Entity {
 }
 
 pub struct GameState<'a> {
-    t_player: &'a Texture,
-    t_enemy: &'a Texture,
-    t_treasure: &'a Texture,
+    assets: &'a Assets,
     pub level: i8,
     pub score: i8,
     pub player: Piece<'a>,
@@ -36,23 +35,27 @@ pub struct GameState<'a> {
     pub clock: Clock,
     pub last_tick: i32,
     pub game_over_clock: Option<Clock>,
+
+    pub debug_ticks: bool,
+    pub debug_loop: bool,
 }
 
 impl<'a> GameState<'a> {
-    pub fn new(player_texture: &'a Texture, enemy_texture: &'a Texture, treasure_texture: &'a Texture) -> GameState<'a> {
+    pub fn new(assets: &'a Assets) -> GameState<'a> {
         GameState {
-            t_player: player_texture,
-            t_enemy: enemy_texture,
-            t_treasure: treasure_texture,
+            assets: assets,
             level: 1,
             score: 0,
-            player: Piece::new(4, 5, player_texture),
+            player: Piece::new(4, 5, &assets.t_player),
             enemies: Vec::new(),
             treasures: Vec::new(),
             phase: Phase::Playing,
             clock: Clock::new(),
             last_tick: 0,
             game_over_clock: None,
+
+            debug_ticks: false,
+            debug_loop: false,
         }
     }
     
@@ -159,25 +162,33 @@ impl<'a> GameState<'a> {
     }
     
     pub fn tick(&mut self) {
+        let start_at = self.game_timer();
+        
         while self.game_timer() > self.last_tick + TICK_FREQ_MS {
             self.last_tick += TICK_FREQ_MS;
         }
 
-        // println!("Tick delayed by {}ms.", self.game_timer() - self.last_tick );
-
+        
         if self.last_tick % 4 == 0 {
             self.move_enemies();
         }
 
         if self.last_tick > 2000 && self.treasures.len() < NUM_TREASURES {
             let point = self.random_free_sq();
-            // Add a treasure.
-            self.treasures.push(Piece::new(point.0, point.1, self.t_treasure));
+            self.treasures.push(Piece::new(point.0, point.1, &self.assets.t_treasure));
         }
 
         if self.last_tick > 1000 && self.enemies.len() < NUM_ENEMIES {
             let point = self.random_free_sq();
-            self.enemies.push(Piece::new(point.0, point.1, self.t_enemy));
+            self.enemies.push(Piece::new(point.0, point.1, &self.assets.t_enemy));
+        }
+
+        let end_at = self.game_timer();
+        if self.debug_ticks {
+            println!("Tick at {}ms took {}ms total, delayed by {}ms.",
+                     self.last_tick,
+                     end_at - start_at,
+                     start_at - self.last_tick);
         }
     }
 
