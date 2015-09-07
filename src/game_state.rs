@@ -3,15 +3,16 @@ use sfml::system::Clock;
 
 use rand;
 use rand::distributions::{IndependentSample, Range};
-    
-use piece::{Piece};
+
+use piece::Piece;
+
+use constants::*;
 
 #[derive(PartialEq)]
 pub enum Phase {
     Playing,
     PlayerLost,
     LevelComplete,
-    SomethingElse,
 }
 
 pub enum Entity {
@@ -28,6 +29,7 @@ pub struct GameState<'a> {
     pub enemies: Vec<Piece<'a>>,
     pub phase: Phase,
     pub clock: Clock,
+    pub last_tick: i32,
     pub game_over_clock: Option<Clock>,
 }
 
@@ -45,6 +47,7 @@ impl<'a> GameState<'a> {
                 ],
             phase: Phase::Playing,
             clock: Clock::new(),
+            last_tick: 0,
             game_over_clock: None,
         }
     }
@@ -132,5 +135,22 @@ impl<'a> GameState<'a> {
             None => 0.0,
         }
     }
-}
 
+    pub fn game_timer(&self) -> i32 {
+        self.clock.get_elapsed_time().as_milliseconds()
+    }
+    
+    pub fn check_tick(&self) -> bool {
+        self.game_timer() > self.last_tick + TICK_FREQ_MS
+    }
+    
+    pub fn tick(&mut self) {
+        while self.game_timer() > self.last_tick + TICK_FREQ_MS {
+            self.last_tick += TICK_FREQ_MS;
+        }
+
+        if self.last_tick % 4 == 0 {
+            self.move_enemies();
+        }
+    }
+}

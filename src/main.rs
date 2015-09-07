@@ -12,9 +12,9 @@ use sfml::system::Vector2f;
 use std::thread;
 
 mod constants;
-use constants::*;
 mod piece;
-use piece::{Piece};
+
+use constants::*;
 mod game_state;
 use game_state::{Entity, GameState, Phase};
 
@@ -39,7 +39,6 @@ fn main() {
         .expect("Could not load Dosis-Medium.ttf!");
 
     let mut game_state = GameState::new(&player_texture, &enemy_texture, &treasure_texture);
-    let mut last_enemy_movement: f32 = 0.0;
     
     while window.is_open() {
         for event in window.events() {
@@ -67,11 +66,10 @@ fn main() {
 
         match game_state.phase {
             Phase::Playing => {
-                if last_enemy_movement < game_state.clock.get_elapsed_time().as_seconds() - ENEMY_MOVE_FREQ {
-                    last_enemy_movement = game_state.clock.get_elapsed_time().as_seconds();
-                    game_state.move_enemies();
+                if game_state.check_tick() {
+                    game_state.tick();
                 }
-
+                
                 draw_status_bar(&mut window, &game_state, &dosis_medium_font);
                 game_state.draw_all(&mut window);
             }
@@ -92,12 +90,9 @@ fn main() {
                 let mut text = Text::new_init("GAME OVER", &dosis_medium_font, SQUARE_SIZE as u32 * 2)
                     .expect("Failed to render text!");
                 let mut textRect = text.get_local_bounds();
-                println!("textRect.width = {}, / 2.0 = {}", textRect.height, textRect.height / 2.0);
-                println!("math says {}", WINDOW_X as f32 - (textRect.width / 2.0));
                 text.set_position2f(
                     (WINDOW_X as f32 / 2.0) - (textRect.width / 2.0),
                     (WINDOW_Y as f32 / 2.0) - (textRect.height / 2.0));
-                println!("{:?}", text.get_position());
                 text.set_color(&Color::red());
                 window.draw(&text);
 
@@ -105,7 +100,6 @@ fn main() {
             },
             Phase::LevelComplete => {
             },
-            _ => {},
         }
         
         // Display things on screen
@@ -120,7 +114,7 @@ fn draw_grid(window: &mut RenderWindow) {
             rect.set_position2f((grid_x as f32) * (SQUARE_SIZE + GRIDLINE_WIDTH) + PADDINGF, (grid_y as f32) * (SQUARE_SIZE + GRIDLINE_WIDTH) + PADDINGF);
             rect.set_size(&Vector2f{x: SQUARE_SIZE, y: SQUARE_SIZE});
             rect.set_fill_color(&Color::black());
-            rect.set_outline_color(&Color::white());
+            rect.set_outline_color(&Color::new_rgb(64, 64, 64));
             rect.set_outline_thickness(GRIDLINE_WIDTH);
 
             window.draw(&rect);
@@ -130,7 +124,7 @@ fn draw_grid(window: &mut RenderWindow) {
 
 fn draw_status_bar(window: &mut RenderWindow, game_state: &GameState, font: &Font) {
     let mut text = Text::new_init(
-        &format!("Level: {}   Score: {}   Time: {}", game_state.level, game_state.score, game_state.clock.get_elapsed_time().as_seconds()), font, 32)
+        &format!("Level: {}   Score: {}   Time: {:.2}", game_state.level, game_state.score, game_state.clock.get_elapsed_time().as_seconds()), font, 32)
         .expect("Failed to render font.");
     text.set_color(&Color::white());
     text.set_position2f(PADDINGF, (WINDOW_Y - 32) as f32);
