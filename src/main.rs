@@ -53,10 +53,13 @@ fn main() {
                     Key::Down => game_state.move_player(0, 1),
                     Key::Left => game_state.move_player(-1, 0),
                     Key::Right => game_state.move_player(1, 0),
+                    Key::Space | Key::Return => {
+                        if game_state.phase == Phase::PlayerLost {
+                            game_state.reset();
+                        }
+                    }
                     _ => {}
                 },
-                // TODO: WAT
-                // event::Resized => {},
                 _ => {}
             };
         }

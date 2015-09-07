@@ -46,7 +46,7 @@ impl<'a> GameState<'a> {
             t_treasure: treasure_texture,
             level: 1,
             score: 0,
-            player: Piece::new(9, 5, player_texture),
+            player: Piece::new(4, 5, player_texture),
             enemies: Vec::new(),
             treasures: Vec::new(),
             phase: Phase::Playing,
@@ -163,6 +163,8 @@ impl<'a> GameState<'a> {
             self.last_tick += TICK_FREQ_MS;
         }
 
+        // println!("Tick delayed by {}ms.", self.game_timer() - self.last_tick );
+
         if self.last_tick % 4 == 0 {
             self.move_enemies();
         }
@@ -188,6 +190,18 @@ impl<'a> GameState<'a> {
             }
         }
         point
+    }
+
+    pub fn reset(&mut self) {
+        self.enemies.clear();
+        self.treasures.clear();
+        self.score = 0;
+        self.level = 1;
+        self.player.x = 5;
+        self.player.y = 4;
+        self.phase = Phase::Playing;
+        self.last_tick = 0;
+        self.clock.restart();
     }
 }
 
