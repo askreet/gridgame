@@ -16,6 +16,7 @@ use constants::*;
 pub struct Piece<'a> {
     pub x: f32,
     pub y: f32,
+    pub size: Vec32<f32>,
     pub texture: &'a Texture,
 }
 
@@ -24,6 +25,8 @@ impl<'a> Piece<'a> {
         Piece {
             x: x,
             y: y,
+            size: Vec2::new(texture.get_size().x,
+                             texture.get_size().y),
             texture: texture,
         }
     }
@@ -55,20 +58,13 @@ impl<'a> Piece<'a> {
         target.draw(&sprite);
     }
 
-    // pub fn get_size() -> Vec2<f32> {
-        
-    // }
-    
-    // TODO: Store this for longer if possible.
     pub fn get_ncol_shape(&self) -> Cuboid<Vec2<f32>> {
-        Cuboid::new(Vec2::new(self.texture.get_size().x as f32 / 2.0,
-                              self.texture.get_size().y as f32 / 2.0))
+        Cuboid::new(Vec2::new(self.size.x / 2.0, self.size.y / 2.0))
     }
 
     pub fn get_ncol_vec(&self) -> Vec2<f32> {
-        // TODO: I'm assuming ncollide expects a cen
-        Vec2::new(self.texture.get_size().x as f32 / 2.0,
-                  self.texture.get_size().y as f32 / 2.0)
+        // TODO: I'm assuming ncollide expects a center point.
+        Vec2::new(self.size.x / 2.0, self.size.y / 2.0)
     }
 }
 

@@ -73,6 +73,8 @@ fn main() {
         match game_state.phase {
             Phase::Playing => {
                 if game_state.check_tick() { game_state.tick() }
+
+                
                 
                 draw_status_bar(&mut window, &game_state, &assets.f_dosis_m);
                 game_state.draw_all(&mut window);
