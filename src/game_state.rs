@@ -1,6 +1,7 @@
 use sfml::audio::{Sound, SoundBuffer};
-use sfml::graphics::{RenderWindow};
+use sfml::graphics::{RenderTarget, RenderWindow};
 use sfml::system::Clock;
+use sfml::traits::drawable::Drawable;
 
 use rand;
 use rand::distributions::{IndependentSample, Range};
@@ -107,19 +108,6 @@ impl<'a> GameState<'a> {
         self.enemies = new_enemies;
     }
 
-    pub fn draw_all(&self, window: &mut RenderWindow) {
-        for enemy in &self.enemies {
-            enemy.draw(window);
-            enemy.draw_collision_shape(window);
-        }
-        for treasure in &self.treasures {
-            treasure.draw(window);
-            treasure.draw_collision_shape(window);
-        }
-        self.player.draw(window);
-        self.player.draw_collision_shape(window);
-    }
-
     pub fn entity_at_square(&self, pos: Vec2<f32>) -> Entity {
         if self.player.pos == pos {
             return Entity::Player;
@@ -216,6 +204,18 @@ impl<'a> GameState<'a> {
         self.phase = Phase::Playing;
         self.last_tick = 0;
         self.clock.restart();
+    }
+}
+
+impl<'a> Drawable for GameState<'a> {
+    fn draw<RT: RenderTarget>(&self, target: &mut RT) {
+        for enemy in &self.enemies {
+            target.draw(enemy);
+        }
+        for treasure in &self.treasures {
+            target.draw(treasure);
+        }
+        target.draw(&self.player);
     }
 }
 

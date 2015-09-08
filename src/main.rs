@@ -3,10 +3,14 @@ extern crate rand;
 extern crate ncollide;
 extern crate nalgebra as na;
 
+use std::rc::Rc;
+
 use sfml::graphics::{RenderWindow, Color, RenderTarget, RectangleShape, Font, Text};
 use sfml::window::{VideoMode, ContextSettings, event, Close};
 use sfml::window::keyboard::Key;
 use sfml::system::Vector2f;
+
+use sfml::traits::drawable::Drawable;
 
 use ncollide::shape::{Cuboid};
 
@@ -76,14 +80,12 @@ fn main() {
             Phase::Playing => {
                 if game_state.check_tick() { game_state.tick() }
 
-                
-                
                 draw_status_bar(&mut window, &game_state, &assets.f_dosis_m);
-                game_state.draw_all(&mut window);
+                window.draw(&game_state);
             }
             Phase::PlayerLost => {
                 // Display gradient / game over based on time since loss.
-                game_state.draw_all(&mut window);
+                window.draw(&game_state);
 
                 let time = game_state.ms_since_dead();
                 let alpha = linear_tween(time, 0, curtain.get_fill_color().alpha, 1000);

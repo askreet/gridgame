@@ -10,6 +10,8 @@ use sfml::graphics::RectangleShape;
 use sfml::graphics::RenderTarget;
 use sfml::graphics::RenderWindow;
 
+use sfml::traits::drawable::Drawable;
+
 use ncollide::shape::Cuboid;
 
 use na::Vec2;
@@ -45,37 +47,44 @@ impl Piece {
             }
     }
 
-    // Scale and draw the piece on the game board.
-    pub fn draw(&self, target: &mut RenderWindow) {
-        let mut sprite = Sprite::new_with_texture(&*self.texture)
-            .expect("Could not create Sprite!");
-
-        sprite.scale2f(
-            (PIECE_SIZE / self.texture.get_size().x as f32),
-            (PIECE_SIZE / self.texture.get_size().y as f32));
-
-        let pos = self.pos + Vec2::new(PADDING, PADDING);
-        sprite.set_position2f(pos.x, pos.y);
-        target.draw(&sprite);
-    }
-
-    pub fn draw_collision_shape(&self, target: &mut RenderWindow) {
-        let mut rect = RectangleShape::new().expect("Could not allocate RectangleShape.");
-        rect.set_size2f(self.size.x, self.size.y);
-        rect.set_position2f(self.pos.x, self.pos.y);
-        rect.set_outline_color(&Color::white());
-        rect.set_outline_thickness(2.0);
-        rect.set_fill_color(&Color::transparent());
-
-        target.draw(&rect);
-    }
-
     pub fn get_ncol_shape(&self) -> Cuboid<Vec2<f32>> {
-        Cuboid::new(Vec2::new(self.size.x / 2.0, self.size.y / 2.0))
+        Cuboid::new(self.size / 2.0)
     }
 
     pub fn get_ncol_vec(&self) -> Vec2<f32> {
         // TODO: I'm assuming ncollide expects a center point.
-        Vec2::new(self.size.x / 2.0, self.size.y / 2.0)
+        self.pos + (self.size / 2.0)
+    }
+}
+
+impl Drawable for Piece {
+    // Scale and draw the piece on the game board.
+    fn draw<RT: RenderTarget>(&self, target: &mut RT) {
+        let mut sprite = Sprite::new_with_texture(&*self.texture)
+            .expect("Could not create Sprite!");
+
+        let x_scale = PIECE_SIZE / self.texture.get_size().x as f32;
+        let y_scale = PIECE_SIZE / self.texture.get_size().y as f32;
+            
+        sprite.scale2f(x_scale, y_scale);
+
+        let pos = self.pos + Vec2::new(PADDING, PADDING);
+        sprite.set_position2f(pos.x, pos.y);
+        target.draw(&sprite);
+
+        if DEBUG_COLLISION {
+            let mut rect = RectangleShape::new().expect("Could not allocate RectangleShape.");
+
+            // Piece boundaries.
+            rect.set_size2f(self.size.x, self.size.y);
+
+            let pos = self.pos + Vec2::new(PADDING, PADDING);
+            rect.set_position2f(pos.x, pos.y);
+            rect.set_outline_color(&Color::white());
+            rect.set_outline_thickness(2.0);
+            rect.set_fill_color(&Color::transparent());
+
+            target.draw(&rect);
+        }
     }
 }
