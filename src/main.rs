@@ -10,6 +10,8 @@ use sfml::system::Vector2f;
 
 use ncollide::shape::{Cuboid};
 
+use na::Vec2;
+
 mod constants;
 mod piece;
 
@@ -44,10 +46,10 @@ fn main() {
                         window.close();
                         break;
                     },
-                    Key::Up => game_state.move_player(0., -10.),
-                    Key::Down => game_state.move_player(0., 10.),
-                    Key::Left => game_state.move_player(-10., 0.),
-                    Key::Right => game_state.move_player(10., 0.),
+                    Key::Up => game_state.move_player(Vec2::new(0., -10.)),
+                    Key::Down => game_state.move_player(Vec2::new(0., 10.)),
+                    Key::Left => game_state.move_player(Vec2::new(-10., 0.)),
+                    Key::Right => game_state.move_player(Vec2::new(10., 0.)),
                     Key::Space | Key::Return => {
                         if game_state.phase == Phase::PlayerLost {
                             game_state.reset();

@@ -5,6 +5,8 @@ use sfml::system::Clock;
 use rand;
 use rand::distributions::{IndependentSample, Range};
 
+use na::Vec2;
+
 use piece::Piece;
 use assets::{Assets, Soundboard};
 
@@ -29,9 +31,9 @@ pub struct GameState<'a> {
     assets: &'a Assets,
     pub level: i8,
     pub score: i8,
-    pub player: Piece<'a>,
-    pub enemies: Vec<Piece<'a>>,
-    pub treasures: Vec<Piece<'a>>,
+    pub player: Piece,
+    pub enemies: Vec<Piece>,
+    pub treasures: Vec<Piece>,
     pub phase: Phase,
     pub clock: Clock,
     pub last_tick: i32,
@@ -49,7 +51,7 @@ impl<'a> GameState<'a> {
             assets: assets,
             level: 1,
             score: 0,
-            player: Piece::new(45., 55., &assets.t_player),
+            player: Piece::new(45., 55., assets.t_player.clone()),
             enemies: Vec::new(),
             treasures: Vec::new(),
             phase: Phase::Playing,
@@ -64,20 +66,20 @@ impl<'a> GameState<'a> {
         }
     }
     
-    pub fn move_player(&mut self, x: f32, y: f32) {
+    pub fn move_player(&mut self, chg: Vec2<f32>) {
         if self.phase != Phase::Playing {
             return;
         }
 
-        match self.entity_at_square(self.player.x + x, self.player.y + y) {
+        let target = self.player.pos + chg;
+        match self.entity_at_square(target) {
             Entity::Enemy => { self.game_over(); return; },
             
             Entity::Treasure => {
                 self.soundboard.s_pickup.play();
                 self.score += 1;
-                let (x, y) = (self.player.x + x, self.player.y + y);
                 // Keep all other treasures.
-                self.treasures.retain(|t| { t.x != x || t.y != y });
+                self.treasures.retain(|t| { t.pos != target });
             },
             _ => {},
         }
@@ -86,7 +88,7 @@ impl<'a> GameState<'a> {
         // NOT IMPLEMENTED
 
         // Move player
-        self.player.move_(x, y);
+        self.player.move_by(chg);
     }
 
     pub fn move_enemies(&mut self) {
@@ -94,9 +96,9 @@ impl<'a> GameState<'a> {
         
         while let Some(mut enemy) = self.enemies.pop() {
             let desired_move = self.random_movement();
-            match self.entity_at_square(enemy.x + desired_move.0, enemy.y + desired_move.1) {
+            match self.entity_at_square(enemy.pos + desired_move) {
                 Entity::Player => self.game_over(),
-                Entity::Nothing => { enemy.move_(desired_move.0, desired_move.1); },
+                Entity::Nothing => { enemy.move_by(desired_move); },
                 _ => {}
             }
             new_enemies.push(enemy);
@@ -108,26 +110,29 @@ impl<'a> GameState<'a> {
     pub fn draw_all(&self, window: &mut RenderWindow) {
         for enemy in &self.enemies {
             enemy.draw(window);
+            enemy.draw_collision_shape(window);
         }
         for treasure in &self.treasures {
             treasure.draw(window);
+            treasure.draw_collision_shape(window);
         }
         self.player.draw(window);
+        self.player.draw_collision_shape(window);
     }
 
-    pub fn entity_at_square(&self, x: f32, y: f32) -> Entity {
-        if self.player.x == x && self.player.y == y {
+    pub fn entity_at_square(&self, pos: Vec2<f32>) -> Entity {
+        if self.player.pos == pos {
             return Entity::Player;
         }
 
         for enemy in &self.enemies {
-            if enemy.x == x && enemy.y == y {
+            if enemy.pos == pos {
                 return Entity::Enemy;
             }
         }
 
         for treasure in &self.treasures {
-            if treasure.x == x && treasure.y == y {
+            if treasure.pos == pos{
                 return Entity::Treasure;
             }
         }
@@ -140,15 +145,15 @@ impl<'a> GameState<'a> {
         self.game_over_clock = Some(Clock::new());
     }
 
-    fn random_movement(&self) -> (f32, f32) {
+    fn random_movement(&self) -> Vec2<f32> {
         let between = Range::new(0, 4);
         let mut rng = rand::thread_rng();
         match between.ind_sample(&mut rng) {
-            0 => (0., -1.),
-            1 => (0., 1.),
-            2 => (-1., 0.),
-            3 => (1., 0.),
-            _ => (0., 0.), // This shouldn't happen.
+            0 => Vec2::new(0., -1.),
+            1 => Vec2::new(0., 1.),
+            2 => Vec2::new(-1., 0.),
+            3 => Vec2::new(1., 0.),
+            _ => Vec2::new(0., 0.), // This shouldn't happen.
         }
     }
 
@@ -174,19 +179,18 @@ impl<'a> GameState<'a> {
             self.last_tick += TICK_FREQ_MS;
         }
 
-        
         if self.last_tick % 4 == 0 {
             self.move_enemies();
         }
 
         if self.last_tick > 2000 && self.treasures.len() < NUM_TREASURES {
             let point = self.random_free_location();
-            self.treasures.push(Piece::new(point.0, point.1, &self.assets.t_treasure));
+            self.treasures.push(Piece::new(point.0, point.1, self.assets.t_treasure.clone()));
         }
 
         if self.last_tick > 1000 && self.enemies.len() < NUM_ENEMIES {
             let point = self.random_free_location();
-            self.enemies.push(Piece::new(point.0, point.1, &self.assets.t_enemy));
+            self.enemies.push(Piece::new(point.0, point.1, self.assets.t_enemy.clone()));
         }
 
         let end_at = self.game_timer();
@@ -208,8 +212,7 @@ impl<'a> GameState<'a> {
         self.treasures.clear();
         self.score = 0;
         self.level = 1;
-        self.player.x = 55.0;
-        self.player.y = 45.0;
+        self.player.pos = Vec2::new(55.0, 45.0);
         self.phase = Phase::Playing;
         self.last_tick = 0;
         self.clock.restart();

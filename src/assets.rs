@@ -6,11 +6,11 @@ use sfml::audio::SoundBuffer;
 use sfml::graphics::{Font, Texture};
 
 pub struct Assets {
-    pub t_player: Texture,
-    pub t_enemy: Texture,
-    pub t_treasure: Texture,
+    pub t_player: Rc<Texture>,
+    pub t_enemy: Rc<Texture>,
+    pub t_treasure: Rc<Texture>,
 
-    pub f_dosis_m: Font,
+    pub f_dosis_m: Rc<Font>,
 
     pub sb_pickup: Rc<RefCell<SoundBuffer>>,
 }
@@ -29,9 +29,9 @@ pub fn load() -> Assets {
     }
 }
 
-fn load_texture(filename: &str) -> Texture {
-    Texture::new_from_file(filename)
-        .expect(&format!("Cannot load file: {}!", filename))
+fn load_texture(filename: &str) -> Rc<Texture> {
+    Rc::new(Texture::new_from_file(filename)
+        .expect(&format!("Cannot load file: {}!", filename)))
 }
 
 fn load_sound_buffer(filename: &str) -> Rc<RefCell<SoundBuffer>> {
@@ -39,9 +39,9 @@ fn load_sound_buffer(filename: &str) -> Rc<RefCell<SoundBuffer>> {
         .expect(&format!("Cannot load file: {}!", filename))))
 }
 
-fn load_font(filename: &str) -> Font {
-    Font::new_from_file(filename)
-        .expect(&format!("Cannot load font: {}!", filename))
+fn load_font(filename: &str) -> Rc<Font> {
+    Rc::new(Font::new_from_file(filename)
+        .expect(&format!("Cannot load font: {}!", filename)))
 }
 
 pub struct Soundboard {
