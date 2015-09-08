@@ -3,18 +3,16 @@ extern crate rand;
 extern crate ncollide;
 extern crate nalgebra as na;
 
-use std::rc::Rc;
-
 use sfml::graphics::{RenderWindow, Color, RenderTarget, RectangleShape, Font, Text};
 use sfml::window::{VideoMode, ContextSettings, event, Close};
 use sfml::window::keyboard::Key;
-use sfml::system::Vector2f;
-
 use sfml::traits::drawable::Drawable;
 
-use ncollide::shape::{Cuboid};
+use na::{Iso2, Vec2};
 
-use na::Vec2;
+use ncollide::broad_phase::BroadPhase;
+use ncollide::broad_phase::DBVTBroadPhase;
+use ncollide::bounding_volume;
 
 mod constants;
 mod piece;
@@ -80,6 +78,27 @@ fn main() {
             Phase::Playing => {
                 if game_state.check_tick() { game_state.tick() }
 
+                let start_col = game_state.game_timer();
+
+                // TODO: What does 0.2 mean?
+                let mut bf = DBVTBroadPhase::new(0.2, true);
+
+                bf.defered_add(0, bounding_volume::aabb(&game_state.player.get_ncol_shape(),
+                                                        &Iso2::new(game_state.player.get_ncol_vec(), na::zero())), 0);
+                let mut ctr = 0;
+                for enemy in &game_state.enemies {
+                    bf.defered_add(ctr+1, bounding_volume::aabb(&enemy.get_ncol_shape(),
+                                                                &Iso2::new(enemy.get_ncol_vec(), na::zero())), ctr+1);
+
+                    ctr += 1;
+                }
+
+                bf.update(&mut |a, b| *a != *b, &mut |_, _, _| { });
+
+                if bf.num_interferences() > 0 {
+                    println!("Collision took {}ms, found {} interferences.", game_state.game_timer() - start_col, bf.num_interferences());
+                }
+                
                 draw_status_bar(&mut window, &game_state, &assets.f_dosis_m);
                 window.draw(&game_state);
             }
