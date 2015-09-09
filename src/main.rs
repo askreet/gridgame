@@ -90,10 +90,10 @@ fn handle_input(window: &mut RenderWindow, state: &mut GameState) {
                 _ => {}
             },
             event::KeyReleased{code, ..} => match code {
-                Key::Up => { state.player.vel.y -= -PLAYER_MOVE_SPEED },
-                Key::Down => { state.player.vel.y -= PLAYER_MOVE_SPEED },
-                Key::Left => { state.player.vel.x -= -PLAYER_MOVE_SPEED },
-                Key::Right => { state.player.vel.x -= PLAYER_MOVE_SPEED },
+                Key::Up => { state.player.vel.y = 0.0 },
+                Key::Down => { state.player.vel.y = 0.0 },
+                Key::Left => { state.player.vel.x = 0.0 },
+                Key::Right => { state.player.vel.x = 0.0 },
                 _ => {},
             },
             _ => {}
@@ -123,10 +123,6 @@ fn update(state: &mut GameState) {
             }
 
             bf.update(&mut |a, b| *a != *b, &mut |_, _, _| { });
-
-            if bf.num_interferences() > 0 {
-                println!("Collision took {}ms, found {} interferences.", state.game_timer() - start_col, bf.num_interferences());
-            }
         }
         Phase::PlayerLost => {
         }
