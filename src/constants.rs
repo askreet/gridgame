@@ -18,3 +18,5 @@ pub const NUM_ENEMIES: usize = 4;
 pub const DEBUG_COLLISION: bool = true;
 
 pub const MS_PER_UPDATE: i32 = 16;
+
+pub const PLAYER_MOVE_SPEED: f32 = 1.50;

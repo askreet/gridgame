@@ -20,6 +20,7 @@ use constants::*;
 
 pub struct Piece {
     pub pos: Vec2<f32>,
+    pub vel: Vec2<f32>,
     pub size: Vec2<f32>,
     pub texture: Rc<Texture>,
 }
@@ -28,6 +29,7 @@ impl Piece {
     pub fn new(x: f32, y: f32, texture: Rc<Texture>) -> Piece {
         Piece {
             pos: Vec2::new(x, y),
+            vel: Vec2::new(0.0, 0.0),
             size: Vec2::new(PIECE_SIZE, PIECE_SIZE),
             texture: texture,
         }
@@ -47,6 +49,11 @@ impl Piece {
             }
     }
 
+    pub fn update(&mut self) {
+        self.pos.x += self.vel.x;
+        self.pos.y += self.vel.y;
+    }
+    
     pub fn get_ncol_shape(&self) -> Cuboid<Vec2<f32>> {
         Cuboid::new(self.size / 2.0)
     }

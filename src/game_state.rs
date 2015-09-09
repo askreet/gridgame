@@ -37,7 +37,6 @@ pub struct GameState<'a> {
     pub treasures: Vec<Piece>,
     pub phase: Phase,
     pub clock: Clock,
-    pub last_tick: i32,
     pub game_over_clock: Option<Clock>,
 
     pub soundboard: Soundboard,
@@ -46,6 +45,10 @@ pub struct GameState<'a> {
     pub debug_loop: bool,
 
     pub game_over_curtain: RectangleShape<'a>,
+
+    last_moved_enemies: i32,
+    last_placed_treasure: i32,
+    last_enemy_spawn: i32,
 }
 
 impl<'a> GameState<'a> {
@@ -62,7 +65,6 @@ impl<'a> GameState<'a> {
             treasures: Vec::new(),
             phase: Phase::Playing,
             clock: Clock::new(),
-            last_tick: 0,
             game_over_clock: None,
 
             soundboard: Soundboard::new(assets),
@@ -70,7 +72,11 @@ impl<'a> GameState<'a> {
             debug_ticks: false,
             debug_loop: false,
 
-            game_over_curtain: curtain
+            game_over_curtain: curtain,
+
+            last_moved_enemies: 0,
+            last_placed_treasure: 0,
+            last_enemy_spawn: 0,
         }
     }
     
@@ -135,7 +141,7 @@ impl<'a> GameState<'a> {
         return Entity::Nothing;
     }
     
-    fn game_over(&mut self) {
+    pub fn game_over(&mut self) {
         self.phase = Phase::PlayerLost;
         self.game_over_clock = Some(Clock::new());
     }
@@ -162,41 +168,41 @@ impl<'a> GameState<'a> {
     pub fn game_timer(&self) -> i32 {
         self.clock.get_elapsed_time().as_milliseconds()
     }
-    
-    pub fn check_tick(&self) -> bool {
-        self.game_timer() > self.last_tick + TICK_FREQ_MS
-    }
-    
-    pub fn tick(&mut self) {
-        let start_at = self.game_timer();
+
+    pub fn update(&mut self) {
+        let now = self.game_timer();
         
-        while self.game_timer() > self.last_tick + TICK_FREQ_MS {
-            self.last_tick += TICK_FREQ_MS;
-        }
-
-        if self.last_tick % 4 == 0 {
+        if now - self.last_moved_enemies >= 1000 {
             self.move_enemies();
+            self.last_moved_enemies = now;
         }
 
-        if self.last_tick > 2000 && self.treasures.len() < NUM_TREASURES {
+        if now - self.last_placed_treasure >= 2000 && self.treasures.len() < NUM_TREASURES {
             let point = self.random_free_location();
             self.treasures.push(Piece::new(point.0, point.1, self.assets.t_treasure.clone()));
+
+            self.last_placed_treasure = now;
         }
 
-        if self.last_tick > 1000 && self.enemies.len() < NUM_ENEMIES {
+        if now - self.last_enemy_spawn >= 1000 && self.enemies.len() < NUM_ENEMIES {
             let point = self.random_free_location();
             self.enemies.push(Piece::new(point.0, point.1, self.assets.t_enemy.clone()));
+
+            self.last_enemy_spawn = now;
         }
 
-        let end_at = self.game_timer();
-        if self.debug_ticks {
-            println!("Tick at {}ms took {}ms total, delayed by {}ms.",
-                     self.last_tick,
-                     end_at - start_at,
-                     start_at - self.last_tick);
+        // TODO: Traits or something?
+        for enemy in &mut self.enemies {
+            enemy.update();
+        }
+
+        self.player.update();
+
+        for treasure in &mut self.treasures {
+            treasure.update();
         }
     }
-
+    
     fn random_free_location(&self) -> (f32, f32) {
         // LOL.
         random_location()
@@ -209,8 +215,10 @@ impl<'a> GameState<'a> {
         self.level = 1;
         self.player.pos = Vec2::new(55.0, 45.0);
         self.phase = Phase::Playing;
-        self.last_tick = 0;
         self.clock.restart();
+        self.last_placed_treasure = 0;
+        self.last_moved_enemies = 0;
+        self.last_enemy_spawn = 0;
     }
 }
 

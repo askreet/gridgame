@@ -48,6 +48,9 @@ fn main() {
 
         handle_input(&mut window, &mut game_state);
 
+        if lag >= MS_PER_UPDATE * 3 {
+            println!("high pre-update lag value -> {}", lag);
+        }
         while lag >= MS_PER_UPDATE {
             update(&mut game_state);
             lag -= MS_PER_UPDATE;
@@ -65,23 +68,33 @@ fn handle_input(window: &mut RenderWindow, state: &mut GameState) {
                 Key::Escape => {
                     window.close();
                     break;
-                },
-                Key::Up => state.move_player(Vec2::new(0., -10.)),
-                Key::Down => state.move_player(Vec2::new(0., 10.)),
-                Key::Left => state.move_player(Vec2::new(-10., 0.)),
-                Key::Right => state.move_player(Vec2::new(10., 0.)),
+                }
+                Key::Up => { state.player.vel.y = -PLAYER_MOVE_SPEED },
+                Key::Down => { state.player.vel.y = PLAYER_MOVE_SPEED },
+                Key::Left => { state.player.vel.x = -PLAYER_MOVE_SPEED },
+                Key::Right => { state.player.vel.x = PLAYER_MOVE_SPEED },
                 Key::Space | Key::Return => {
                     if state.phase == Phase::PlayerLost {
                         state.reset();
                     }
-                },
+                }
                 Key::F1 => {
                     state.debug_ticks = !state.debug_ticks;
-                },
+                }
                 Key::F2 => {
                     state.debug_loop = !state.debug_loop;
                 }
+                Key::F3 => {
+                    state.game_over();
+                }
                 _ => {}
+            },
+            event::KeyReleased{code, ..} => match code {
+                Key::Up => { state.player.vel.y -= -PLAYER_MOVE_SPEED },
+                Key::Down => { state.player.vel.y -= PLAYER_MOVE_SPEED },
+                Key::Left => { state.player.vel.x -= -PLAYER_MOVE_SPEED },
+                Key::Right => { state.player.vel.x -= PLAYER_MOVE_SPEED },
+                _ => {},
             },
             _ => {}
         };
@@ -92,7 +105,7 @@ fn handle_input(window: &mut RenderWindow, state: &mut GameState) {
 fn update(state: &mut GameState) {
     match state.phase {
         Phase::Playing => {
-            if state.check_tick() { state.tick() }
+            state.update();
 
             let start_col = state.game_timer();
 
@@ -116,8 +129,7 @@ fn update(state: &mut GameState) {
             }
         }
         Phase::PlayerLost => {
-        },
-        // Phase::LevelComplete => {},
+        }
     }
 }
 
@@ -134,10 +146,11 @@ fn render(window: &mut RenderWindow, state: &mut GameState) {
             window.draw(state);
         },
         Phase::PlayerLost => {
-            // Display gradient / game over based on time since loss.
             window.draw(state);
 
+            // Display gradient / game over based on time since loss.
             let time = state.ms_since_dead();
+            println!("Calling linear_tween({}, 0, {}, 1000)", time, state.game_over_curtain.get_fill_color().alpha);
             let alpha = linear_tween(time, 0, state.game_over_curtain.get_fill_color().alpha, 1000);
 
             state.game_over_curtain.set_fill_color(&Color::new_rgba(0, 0, 0, alpha));
