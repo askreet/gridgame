@@ -1,5 +1,5 @@
 use sfml::audio::{Sound, SoundBuffer};
-use sfml::graphics::{RenderTarget, RenderWindow};
+use sfml::graphics::{RectangleShape, RenderTarget, RenderWindow};
 use sfml::system::Clock;
 use sfml::traits::drawable::Drawable;
 
@@ -29,7 +29,7 @@ pub enum Entity {
 }
 
 pub struct GameState<'a> {
-    assets: &'a Assets,
+    pub assets: &'a Assets,
     pub level: i8,
     pub score: i8,
     pub player: Piece,
@@ -44,10 +44,15 @@ pub struct GameState<'a> {
 
     pub debug_ticks: bool,
     pub debug_loop: bool,
+
+    pub game_over_curtain: RectangleShape<'a>,
 }
 
 impl<'a> GameState<'a> {
     pub fn new(assets: &'a Assets) -> GameState<'a> {
+        let mut curtain = RectangleShape::new().expect("Could not allocate RectangleShape!");
+        curtain.set_size2f(WINDOW_X as f32, WINDOW_Y as f32);
+        
         GameState {
             assets: assets,
             level: 1,
@@ -64,6 +69,8 @@ impl<'a> GameState<'a> {
             
             debug_ticks: false,
             debug_loop: false,
+
+            game_over_curtain: curtain
         }
     }
     

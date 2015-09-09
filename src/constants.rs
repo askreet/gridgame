@@ -16,3 +16,5 @@ pub const NUM_TREASURES: usize = 2;
 pub const NUM_ENEMIES: usize = 4;
 
 pub const DEBUG_COLLISION: bool = true;
+
+pub const MS_PER_UPDATE: i32 = 16;
