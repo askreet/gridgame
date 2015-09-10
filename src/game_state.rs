@@ -1,3 +1,5 @@
+use std::f32;
+
 use sfml::audio::{Sound, SoundBuffer};
 use sfml::graphics::{RectangleShape, RenderTarget, RenderWindow};
 use sfml::system::Clock;
@@ -186,14 +188,14 @@ impl<'a> GameState<'a> {
 
         if now - self.last_placed_treasure >= 2000 && self.treasures.len() < NUM_TREASURES {
             let point = self.random_free_location();
-            self.treasures.push(Piece::new(point.0, point.1, self.assets.t_treasure.clone()));
+            self.treasures.push(Piece::new(point.x, point.y, self.assets.t_treasure.clone()));
 
             self.last_placed_treasure = now;
         }
 
-        if now - self.last_enemy_spawn >= 1000 && self.enemies.len() < NUM_ENEMIES {
+        if now - self.last_enemy_spawn >= 500 && self.enemies.len() < NUM_ENEMIES {
             let point = self.random_free_location();
-            self.enemies.push(Piece::new(point.0, point.1, self.assets.t_enemy.clone()));
+            self.enemies.push(Piece::new(point.x, point.y, self.assets.t_enemy.clone()));
 
             self.last_enemy_spawn = now;
         }
@@ -265,9 +267,13 @@ impl<'a> GameState<'a> {
         }
     }
     
-    fn random_free_location(&self) -> (f32, f32) {
-        // LOL.
-        random_location()
+    fn random_free_location(&self) -> Vec2<f32> {
+        loop {
+            let pos = random_location();
+            if dist(self.player.pos, pos) > 250.0 {
+                return pos
+            }
+        }
     }
 
     pub fn reset(&mut self) {
@@ -302,8 +308,8 @@ impl<'a> Drawable for GameState<'a> {
     }
 }
 
-fn random_location() -> (f32, f32) {
-    (random_upto(PLAYAREA_X), random_upto(PLAYAREA_Y))
+fn random_location() -> Vec2<f32> {
+    Vec2::new(random_upto(PLAYAREA_X), random_upto(PLAYAREA_Y))
 }
 
 fn random_upto(max: f32) -> f32 {
@@ -311,3 +317,11 @@ fn random_upto(max: f32) -> f32 {
     let mut rng = rand::thread_rng();
     between.ind_sample(&mut rng)
 }
+
+#[inline]
+fn dist(p1: Vec2<f32>, p2: Vec2<f32>) -> f32 {
+    let xd = p1.x - p2.x;
+    let yd = p1.y - p2.y;
+    f32::sqrt(xd * xd + yd * yd)
+}
+

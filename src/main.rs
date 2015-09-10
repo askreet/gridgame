@@ -90,10 +90,10 @@ fn handle_input(window: &mut RenderWindow, state: &mut GameState) {
                 _ => {}
             },
             event::KeyReleased{code, ..} => match code {
-                Key::Up => { state.player.vel.y = 0.0 },
-                Key::Down => { state.player.vel.y = 0.0 },
-                Key::Left => { state.player.vel.x = 0.0 },
-                Key::Right => { state.player.vel.x = 0.0 },
+                Key::Up => { if state.player.vel.y < 0.0 { state.player.vel.y = 0.0 } },
+                Key::Down => { if state.player.vel.y > 0.0 { state.player.vel.y = 0.0 } },
+                Key::Left => { if state.player.vel.x < 0.0 { state.player.vel.x = 0.0 } },
+                Key::Right => { if state.player.vel.x > 0.0 { state.player.vel.x = 0.0 } },
                 _ => {},
             },
             _ => {}
