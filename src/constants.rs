@@ -13,7 +13,7 @@ pub const TICK_FREQ_MS: i32 = 250;
 
 // TODO: These should increase with difficulty.
 pub const NUM_TREASURES: usize = 2;
-pub const NUM_ENEMIES: usize = 4;
+pub const NUM_ENEMIES: usize = 6;
 
 pub const DEBUG_COLLISION: bool = true;
 

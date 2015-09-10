@@ -6,7 +6,12 @@ use sfml::traits::drawable::Drawable;
 use rand;
 use rand::distributions::{IndependentSample, Range};
 
-use na::Vec2;
+use na;
+use na::{Iso2, Vec2};
+
+use ncollide::bounding_volume;
+use ncollide::broad_phase::BroadPhase;
+use ncollide::broad_phase::DBVTBroadPhase;
 
 use piece::Piece;
 use assets::{Assets, Soundboard};
@@ -112,7 +117,9 @@ impl<'a> GameState<'a> {
             let desired_move = self.random_movement();
             match self.entity_at_square(enemy.pos + desired_move) {
                 Entity::Player => self.game_over(),
-                Entity::Nothing => { enemy.move_by(desired_move); },
+                Entity::Nothing => {
+                    enemy.vel = desired_move;
+                },
                 _ => {}
             }
             new_enemies.push(enemy);
@@ -201,6 +208,61 @@ impl<'a> GameState<'a> {
         for treasure in &mut self.treasures {
             treasure.update();
         }
+
+        // Collision detection
+        self.do_collision_detection();
+    }
+
+    fn do_collision_detection(&mut self) {
+        // TODO: We shouldn't be building this up each time and instead just adding/removing
+        //       elements with defered_add / defered_remove from a heap-allocated BroadPhase, probably.
+        // TODO: What does 0.2 mean?
+        let mut bf = DBVTBroadPhase::new(0.2, true);
+
+        let player_bv = bounding_volume::aabb(&self.player.get_ncol_shape(),
+                                              &Iso2::new(self.player.get_ncol_vec(), na::zero()));
+        bf.defered_add(0, player_bv.clone(), (Entity::Player, 0));
+        let mut ctr = 0;
+        for (i, enemy) in self.enemies.iter().enumerate() {
+            bf.defered_add(ctr+1, bounding_volume::aabb(&enemy.get_ncol_shape(),
+                                                        &Iso2::new(enemy.get_ncol_vec(), na::zero())), (Entity::Enemy, i));
+
+            ctr += 1;
+        }
+
+        for (i, treasure) in self.treasures.iter().enumerate() {
+            bf.defered_add(ctr+1, bounding_volume::aabb(&treasure.get_ncol_shape(),
+                                                        &Iso2::new(treasure.get_ncol_vec(), na::zero())), (Entity::Treasure, i));
+
+            ctr += 1;
+        }
+
+        // TODO: Docs say this "avoids self collisions", but output from the below call to
+        //       interferences with bounding volume always contain 1 result.
+        bf.update(&mut |a, b| *a != *b, &mut |_, _, _| { });
+
+        let mut collisions = Vec::new();
+
+        bf.interferences_with_bounding_volume(&player_bv, &mut collisions);
+
+        if collisions.len() > 1 {
+            for collision in collisions {
+                match *collision {
+                    (Entity::Player, _) => {} // We don't care.
+                    (Entity::Enemy, _) => {
+                        self.game_over();
+                    },
+                    (Entity::Treasure, i) => {
+                        self.score += 1;
+
+                        // FIXME: This shifts items to the left, which could result in a panic situation if you gather
+                        //        two treasures at once.
+                        self.treasures.remove(i);
+                    },
+                    _ => {},
+                }
+            }
+        }
     }
     
     fn random_free_location(&self) -> (f32, f32) {
@@ -219,6 +281,12 @@ impl<'a> GameState<'a> {
         self.last_placed_treasure = 0;
         self.last_moved_enemies = 0;
         self.last_enemy_spawn = 0;
+    }
+
+    pub fn render<RT: RenderTarget>(&mut self, target: &mut RT, lag: f32) {
+        for enemy in &self.enemies { enemy.render(target, lag); }
+        for treasure in &self.treasures { treasure.render(target, lag); }
+        self.player.render(target, lag);
     }
 }
 

@@ -52,6 +52,13 @@ impl Piece {
     pub fn update(&mut self) {
         self.pos.x += self.vel.x;
         self.pos.y += self.vel.y;
+
+        if self.pos.x < 0.0 { self.pos.x = 0.0 }
+        if self.pos.y < 0.0 { self.pos.y = 0.0 }
+
+        let bot_right = self.pos + self.size;
+        if bot_right.x > PLAYAREA_X { self.pos.x = PLAYAREA_X - self.size.x }
+        if bot_right.y > PLAYAREA_Y { self.pos.y = PLAYAREA_Y - self.size.y }
     }
     
     pub fn get_ncol_shape(&self) -> Cuboid<Vec2<f32>> {
@@ -61,6 +68,36 @@ impl Piece {
     pub fn get_ncol_vec(&self) -> Vec2<f32> {
         // TODO: I'm assuming ncollide expects a center point.
         self.pos + (self.size / 2.0)
+    }
+
+    pub fn render<RT: RenderTarget>(&self, target: &mut RT, lag: f32) {
+        let mut sprite = Sprite::new_with_texture(&*self.texture)
+            .expect("Could not create Sprite!");
+
+        let x_scale = PIECE_SIZE / self.texture.get_size().x as f32;
+        let y_scale = PIECE_SIZE / self.texture.get_size().y as f32;
+            
+        sprite.scale2f(x_scale, y_scale);
+
+        // TODO: render within playarea in a better way, make the playarea a RenderTarget?
+        let pos = self.pos + Vec2::new(PADDING, PADDING) + (self.vel * lag);
+        sprite.set_position2f(pos.x, pos.y);
+        target.draw(&sprite);
+
+        if DEBUG_COLLISION {
+            let mut rect = RectangleShape::new().expect("Could not allocate RectangleShape.");
+
+            // Piece boundaries.
+            rect.set_size2f(self.size.x, self.size.y);
+
+            let pos = self.pos + Vec2::new(PADDING, PADDING);
+            rect.set_position2f(pos.x, pos.y);
+            rect.set_outline_color(&Color::white());
+            rect.set_outline_thickness(2.0);
+            rect.set_fill_color(&Color::transparent());
+
+            target.draw(&rect);
+        }
     }
 }
 

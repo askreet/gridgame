@@ -56,7 +56,7 @@ fn main() {
             lag -= MS_PER_UPDATE;
         }
 
-        render(&mut window, &mut game_state);
+        render(&mut window, &mut game_state, lag as f32 / MS_PER_UPDATE as f32);
     }
 }
 
@@ -106,30 +106,13 @@ fn update(state: &mut GameState) {
     match state.phase {
         Phase::Playing => {
             state.update();
-
-            let start_col = state.game_timer();
-
-            // TODO: What does 0.2 mean?
-            let mut bf = DBVTBroadPhase::new(0.2, true);
-
-            bf.defered_add(0, bounding_volume::aabb(&state.player.get_ncol_shape(),
-                                                    &Iso2::new(state.player.get_ncol_vec(), na::zero())), 0);
-            let mut ctr = 0;
-            for enemy in &state.enemies {
-                bf.defered_add(ctr+1, bounding_volume::aabb(&enemy.get_ncol_shape(),
-                                                            &Iso2::new(enemy.get_ncol_vec(), na::zero())), ctr+1);
-
-                ctr += 1;
-            }
-
-            bf.update(&mut |a, b| *a != *b, &mut |_, _, _| { });
         }
         Phase::PlayerLost => {
         }
     }
 }
 
-fn render(window: &mut RenderWindow, state: &mut GameState) {
+fn render(window: &mut RenderWindow, state: &mut GameState, lag: f32) {
     // Clear the window
     window.clear(&Color::black());
 
@@ -139,15 +122,14 @@ fn render(window: &mut RenderWindow, state: &mut GameState) {
     match state.phase {
         Phase::Playing => {
             draw_status_bar(window, &state);
-            window.draw(state);
+            state.render(window, lag);
         },
         Phase::PlayerLost => {
-            window.draw(state);
+            state.render(window, lag);
 
             // Display gradient / game over based on time since loss.
             let time = state.ms_since_dead();
-            println!("Calling linear_tween({}, 0, {}, 1000)", time, state.game_over_curtain.get_fill_color().alpha);
-            let alpha = linear_tween(time, 0, state.game_over_curtain.get_fill_color().alpha, 1000);
+            let alpha = linear_tween(time, 0, 190, 1000);
 
             state.game_over_curtain.set_fill_color(&Color::new_rgba(0, 0, 0, alpha));
 
@@ -158,9 +140,9 @@ fn render(window: &mut RenderWindow, state: &mut GameState) {
                 (WINDOW_X as f32 / 2.0) - (text_rect.width / 2.0),
                 (WINDOW_Y as f32 / 2.0) - (text_rect.height / 2.0));
             text.set_color(&Color::red());
-            window.draw(&text);
 
             window.draw(&state.game_over_curtain);
+            window.draw(&text);
         }
     }
 
@@ -188,9 +170,13 @@ fn draw_status_bar(window: &mut RenderWindow, game_state: &GameState) {
 
 // t: current time
 // b: start value
-// c: change in value ??
+// c: target value
 // d: duration
 fn linear_tween(t: i32, b: u8, c: u8, d: i32) -> u8 {
+    if t < d {
+        (c as f32 * (t as f32/d as f32) + b as f32) as u8
+    } else {
+        c
+    }
     // TODO: This is probably terribly inefficient.
-    (c as f32 * (t as f32/d as f32) + b as f32) as u8
 }
